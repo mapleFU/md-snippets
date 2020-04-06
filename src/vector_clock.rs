@@ -36,27 +36,19 @@ impl VectorClockHandler {
             match c.cmp(o) {
                 Ordering::Less => {
                     smaller += 1;
-                },
-                Ordering::Equal => {},
+                }
+                Ordering::Equal => {}
                 Ordering::Greater => {
                     larger += 1;
-                },
+                }
             };
-        };
+        }
 
         match (larger, smaller) {
-            (0, 0) => {
-                Some(Ordering::Equal)
-            },
-            (0, _) => {
-                Some(Ordering::Less)
-            },
-            (_, 0) => {
-                Some(Ordering::Greater)
-            },
-            _ => {
-                None
-            }
+            (0, 0) => Some(Ordering::Equal),
+            (0, _) => Some(Ordering::Less),
+            (_, 0) => Some(Ordering::Greater),
+            _ => None,
         }
     }
 
@@ -86,17 +78,14 @@ impl VectorClockHandler {
 
 #[cfg(test)]
 mod test {
-    use crate::vector_clock::{VectorClockHandler, Cfg};
+    use crate::vector_clock::{Cfg, VectorClockHandler};
     use std::cmp::Ordering;
 
     #[test]
     fn test_vector_clock() {
         let mut datas = vec![];
         for i in 0..3 {
-            datas.push(VectorClockHandler::new(Cfg {
-                proc: 3,
-                me: i,
-            }))
+            datas.push(VectorClockHandler::new(Cfg { proc: 3, me: i }))
         }
 
         // c->b, b->a
