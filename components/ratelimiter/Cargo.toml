@@ -1,10 +1,15 @@
 [package]
-name = "dist-snippets"
+name = "ratelimiter"
 version = "0.1.0"
-authors = ["mapleFU <1506118561@qq.com>"]
+authors = ["mwish <anmmscs_maple@qq.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ratelimiter = { path = "components/ratelimiter" }
+chrono = "0.4"
+
+[[bin]]
+name = "main"
+doc = false
+path = "bin/main.rs"
