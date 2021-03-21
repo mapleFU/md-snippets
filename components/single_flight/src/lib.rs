@@ -24,6 +24,7 @@ impl<T> SingleFlight<T> {
 struct Call<T> {
     value: Option<T>,
     // wg: WaitGroup,
+    // TODO(mwish): using a conditional variable.
     wg: Arc<AtomicUsize>,
 }
 
@@ -55,7 +56,7 @@ impl<T: Copy + Clone> SingleFlight<T> {
         if let Some(v) = sf_locked.map.get(key) {
             let cloned_call = v.clone();
             drop(sf_locked);
-            while true {
+            loop {
                 if cloned_call.wg.load(Ordering::SeqCst) == 0 {
                     break;
                 } else {
@@ -67,7 +68,6 @@ impl<T: Copy + Clone> SingleFlight<T> {
 
         let c = Call::new();
         c.wg.store(1, Ordering::SeqCst);
-        let wg = c.wg.clone();
         let call = sf_locked.map.entry(key.to_string()).or_insert(Arc::new(c));
         let mut cloned_call = call.clone();
         drop(sf_locked);
