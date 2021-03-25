@@ -6,6 +6,7 @@ use bit_field::BitField;
 // You may customize this to set a different epoch for your application.
 const EPOCH: u64 = 1288834974657;
 
+// TODO(mwish): Think of can we use atomic and cas.
 pub struct Node {
     // immutable since start
     epoch: time::Instant,
@@ -63,7 +64,7 @@ impl Node {
     }
 }
 
-const TIMESTAMP_RANGE: std::ops::Range<usize> = 22..65;
+const TIMESTAMP_RANGE: std::ops::Range<usize> = 22..63;
 const NODE_ID_RANGE: std::ops::Range<usize> = 12..22;
 const SEQ_ID_RANGE: std::ops::Range<usize> = 0..12;
 
