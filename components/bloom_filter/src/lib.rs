@@ -3,13 +3,11 @@
 use bitvec::boxed::BitBox;
 use bitvec::prelude::*;
 
-use byteorder::{BigEndian, ReadBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::num::Wrapping;
-
-use std::io::{Cursor, Read};
 
 /// A Bloom filter with a 1% error and an optimal value of k,
 /// in contrast, requires only about 9.6 bits per element,
@@ -42,8 +40,6 @@ impl Config {
 /// The number of hash functions is k,
 /// n is the number of string. To minimize false positive rate, k is (m / n) * ln2.
 pub struct BloomFilter {
-    cfg: Config,
-
     current_key: usize,
     hash_func_number: u8,
     bit_size: usize,
@@ -68,7 +64,6 @@ impl BloomFilter {
             }
         };
         BloomFilter {
-            cfg,
             current_key: 0,
             // Note: hash_func_number is in [1, 30], so it's safe to as u8.
             hash_func_number: hash_func_number as u8,
@@ -79,22 +74,21 @@ impl BloomFilter {
     }
 
     /// dump_filter will dump a BloomFilter to String
+    /// 
+    /// Note: 这个地方实现的时候踩了一把 byteorder 和 usize 的坑。
     pub fn dump_filter(&self) -> Vec<u8> {
-        // let mut slice: Vec<usize> = self.bit_vec.as_slice().to_owned();
-        // slice.push(self.current_key);
-        let slice: Vec<u16> = vec![];
         let resp_sz = self.current_key * (std::mem::size_of::<usize>() / std::mem::size_of::<u8>());
         let mut resp: Vec<u8> = Vec::with_capacity(resp_sz);
 
-        let mut rdr = Cursor::new(slice);
-        for _ in 0..resp_sz {
-            resp.push(rdr.read_u8().unwrap());
-        };
+        // TODO(mwish): https://stackoverflow.com/questions/53161339/how-do-i-use-the-byteorder-crate-to-read-a-usize
+        for elem in self.bit_vec.as_slice() {
+            resp.write_u64::<BigEndian>(*elem as u64).unwrap();
+        }
 
         resp
     }
 
-    pub fn parse<S: Into<String>>(s: S) -> Self {
+    pub fn parse(_s: impl AsRef<str>) -> Self {
         unimplemented!()
     }
 
@@ -121,6 +115,7 @@ impl BloomFilter {
             if unsafe { !*self.bit_vec.get_unchecked(bit_pos) } {
                 return false;
             }
+            base_hash += delta;
         }
         true
     }
