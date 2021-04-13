@@ -1,0 +1,11 @@
+[package]
+name = "bloom_filter"
+version = "0.1.0"
+authors = ["mwish <anmmscs_maple@qq.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitvec = "0.21"
+byteorder = "1"
