@@ -21,6 +21,8 @@ pub struct Config {
     bits_per_key: usize,
     /// 估计中的 key 的数目
     estimate_key_number: usize,
+    /// bloom filter 的 bit_size
+    bloom_size: usize,
 }
 
 impl Config {
@@ -29,9 +31,14 @@ impl Config {
     /// http://pages.cs.wisc.edu/~cao/papers/summary-cache/node8.html
     /// https://github.com/willf/bloom/blob/master/bloom.go
     pub fn new_with_estimate(false_positive: f64, estimate_key_number: usize) -> Self {
+        let bloom_size = (-1.0_f64 * (estimate_key_number as f64) * false_positive.log2()
+            / (2.0_f64).log2().powi(2))
+        .ceil() as usize;
+        
         Config {
-            bits_per_key: 10,
+            bits_per_key: 0,
             estimate_key_number,
+            bloom_size,
         }
     }
 }
@@ -57,7 +64,9 @@ impl BloomFilter {
         }
 
         let bits_size: usize = {
-            if cfg.bits_per_key * cfg.estimate_key_number > 64 {
+            if cfg.bloom_size >= cfg.estimate_key_number {
+                cfg.bloom_size
+            } else if cfg.bits_per_key * cfg.estimate_key_number > 64 {
                 cfg.bits_per_key * cfg.estimate_key_number
             } else {
                 64
@@ -74,22 +83,40 @@ impl BloomFilter {
     }
 
     /// dump_filter will dump a BloomFilter to String
-    /// 
+    ///
     /// Note: 这个地方实现的时候踩了一把 byteorder 和 usize 的坑。
+    /// * Vec<u8>: u8 串 + 函数数目(1byte) + 现有 key 数目(4bytes)
     pub fn dump_filter(&self) -> Vec<u8> {
-        let resp_sz = self.current_key * (std::mem::size_of::<usize>() / std::mem::size_of::<u8>());
+        let reserve_bytes = ((self.bit_size + 7) / 8) * 8;
+        // 长度: u8 串 + 函数数目 + 现有 key 数目
+        let resp_sz = reserve_bytes + (std::mem::size_of::<usize>() / std::mem::size_of::<u8>()) + 1;
         let mut resp: Vec<u8> = Vec::with_capacity(resp_sz);
 
         // TODO(mwish): https://stackoverflow.com/questions/53161339/how-do-i-use-the-byteorder-crate-to-read-a-usize
-        for elem in self.bit_vec.as_slice() {
-            resp.write_u64::<BigEndian>(*elem as u64).unwrap();
+        // Note: 这里目前确保是 BigEndian
+        let shorts = unsafe {
+            let (prefix, shorts, surfix) = self.bit_vec.as_slice().align_to::<u8>();
+            assert!(prefix.len() == 0);
+            assert!(surfix.len() == 0);
+            shorts
+        };
+        for i in 0..reserve_bytes {
+            resp.push(shorts[i]);
         }
+
+        resp.push(self.hash_func_number);
+
+        resp.write_u64::<BigEndian>(self.current_key as u64).unwrap();
 
         resp
     }
 
-    pub fn parse(_s: impl AsRef<str>) -> Self {
-        unimplemented!()
+    pub fn parse(s: impl AsRef<[u8]>) -> Self {
+        let slice = s.as_ref();
+        if slice.len() <= (std::mem::size_of::<usize>() / std::mem::size_of::<u8>()) + 1 {
+            panic!("when parsing, the slice is too short");
+        }
+        unimplemented!();
     }
 
     pub fn add<T: AsRef<str>>(&mut self, key: T) {
@@ -133,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_basic() {
-        let cfg = Config::new_with_estimate(0.2, 100);
+        let cfg = Config::new_with_estimate(0.01, 100);
         let mut bloom = BloomFilter::new(cfg);
 
         assert!(!bloom.key_may_match("nmsl"));
@@ -141,5 +168,10 @@ mod tests {
         bloom.add("nmsl");
 
         assert!(bloom.key_may_match("nmsl"));
+
+        assert!(!bloom.key_may_match("n"));
+        assert!(!bloom.key_may_match("m"));
+        assert!(!bloom.key_may_match("s"));
+        assert!(!bloom.key_may_match("l"));
     }
 }
