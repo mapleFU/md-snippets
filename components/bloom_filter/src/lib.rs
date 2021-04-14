@@ -1,12 +1,14 @@
 #![feature(wrapping_int_impl)]
 
 use bitvec::boxed::BitBox;
+use bitvec::order::Lsb0;
 use bitvec::prelude::*;
 
-use byteorder::{BigEndian, WriteBytesExt};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::io::Cursor;
 use std::num::Wrapping;
 
 /// A Bloom filter with a 1% error and an optimal value of k,
@@ -34,7 +36,7 @@ impl Config {
         let bloom_size = (-1.0_f64 * (estimate_key_number as f64) * false_positive.log2()
             / (2.0_f64).log2().powi(2))
         .ceil() as usize;
-        
+
         Config {
             bits_per_key: 0,
             estimate_key_number,
@@ -50,36 +52,48 @@ pub struct BloomFilter {
     current_key: usize,
     hash_func_number: u8,
     bit_size: usize,
-    bit_vec: BitBox,
+    bit_vec: BitBox<Lsb0, u8>,
 }
 
 impl BloomFilter {
     pub fn new(cfg: Config) -> Self {
+        let bits_size: usize = {
+            if cfg.bloom_size >= cfg.estimate_key_number {
+                ((cfg.bloom_size + 7) / 8) * 8
+            } else if cfg.bits_per_key * cfg.estimate_key_number > 64 {
+                ((cfg.bits_per_key * cfg.estimate_key_number + 7) / 8) * 8
+            } else {
+                64
+            }
+        };
+
+        let bits_per_key = if cfg.bits_per_key == 0 {
+            bits_size / cfg.estimate_key_number
+        } else {
+            cfg.bits_per_key
+        };
+
         let mut hash_func_number =
-            ((cfg.estimate_key_number as f64) * (cfg.bits_per_key as f64)) as u64;
+            ((cfg.estimate_key_number as f64) * (bits_per_key as f64)) as u64;
         if hash_func_number > 30 {
             hash_func_number = 30;
         } else if hash_func_number < 1 {
             hash_func_number = 1;
         }
 
-        let bits_size: usize = {
-            if cfg.bloom_size >= cfg.estimate_key_number {
-                cfg.bloom_size
-            } else if cfg.bits_per_key * cfg.estimate_key_number > 64 {
-                cfg.bits_per_key * cfg.estimate_key_number
-            } else {
-                64
-            }
-        };
         BloomFilter {
             current_key: 0,
             // Note: hash_func_number is in [1, 30], so it's safe to as u8.
             hash_func_number: hash_func_number as u8,
             bit_size: bits_size,
             /// 我看了半天文档没看懂 bit_vec 咋回事
-            bit_vec: bitbox![0; bits_size],
+            bit_vec: bitbox![LocalBits, u8; 0; bits_size],
         }
+    }
+
+    #[inline]
+    fn meta_size() -> usize {
+        (std::mem::size_of::<usize>() / std::mem::size_of::<u8>()) + 1
     }
 
     /// dump_filter will dump a BloomFilter to String
@@ -87,36 +101,48 @@ impl BloomFilter {
     /// Note: 这个地方实现的时候踩了一把 byteorder 和 usize 的坑。
     /// * Vec<u8>: u8 串 + 函数数目(1byte) + 现有 key 数目(4bytes)
     pub fn dump_filter(&self) -> Vec<u8> {
-        let reserve_bytes = ((self.bit_size + 7) / 8) * 8;
+        let reserve_bytes = self.bit_size / 8;
         // 长度: u8 串 + 函数数目 + 现有 key 数目
-        let resp_sz = reserve_bytes + (std::mem::size_of::<usize>() / std::mem::size_of::<u8>()) + 1;
+        let resp_sz = reserve_bytes + Self::meta_size();
         let mut resp: Vec<u8> = Vec::with_capacity(resp_sz);
 
-        // TODO(mwish): https://stackoverflow.com/questions/53161339/how-do-i-use-the-byteorder-crate-to-read-a-usize
-        // Note: 这里目前确保是 BigEndian
-        let shorts = unsafe {
-            let (prefix, shorts, surfix) = self.bit_vec.as_slice().align_to::<u8>();
-            assert!(prefix.len() == 0);
-            assert!(surfix.len() == 0);
-            shorts
-        };
+        let shorts = self.bit_vec.as_slice();
+
         for i in 0..reserve_bytes {
             resp.push(shorts[i]);
         }
 
         resp.push(self.hash_func_number);
 
-        resp.write_u64::<BigEndian>(self.current_key as u64).unwrap();
-
+        resp.write_u64::<BigEndian>(self.current_key as u64)
+            .unwrap();
         resp
     }
 
     pub fn parse(s: impl AsRef<[u8]>) -> Self {
         let slice = s.as_ref();
-        if slice.len() <= (std::mem::size_of::<usize>() / std::mem::size_of::<u8>()) + 1 {
+        if slice.len() <= Self::meta_size() + 1 {
+            // TODO(mwish): return a error.
             panic!("when parsing, the slice is too short");
+        };
+
+        let hash_func_number = slice[slice.len() - Self::meta_size()];
+        let mut cursor = Cursor::new(&slice[slice.len() - Self::meta_size() + 1..]);
+
+        let current_key = cursor.read_u64::<BigEndian>().unwrap() as usize;
+
+        let data_slice = &slice[0..slice.len() - Self::meta_size()];
+        let bit_size = data_slice.len() * 8;
+
+        let box_slice: Box<[u8]> = data_slice.into();
+        let bit_vec = BitBox::<LocalBits, _>::from_boxed_slice(box_slice);
+
+        Self {
+            current_key,
+            hash_func_number,
+            bit_size,
+            bit_vec,
         }
-        unimplemented!();
     }
 
     pub fn add<T: AsRef<str>>(&mut self, key: T) {
@@ -150,7 +176,7 @@ impl BloomFilter {
 
 fn bloom_hash(s: impl AsRef<str>) -> u64 {
     let mut t = DefaultHasher::new();
-    s.as_ref().hash(&mut t);
+    s.as_ref().to_string().hash(&mut t);
     t.finish()
 }
 
@@ -166,6 +192,16 @@ mod tests {
         assert!(!bloom.key_may_match("nmsl"));
 
         bloom.add("nmsl");
+
+        assert!(bloom.key_may_match("nmsl"));
+
+        assert!(!bloom.key_may_match("n"));
+        assert!(!bloom.key_may_match("m"));
+        assert!(!bloom.key_may_match("s"));
+        assert!(!bloom.key_may_match("l"));
+
+        let vec = bloom.dump_filter();
+        let bloom = BloomFilter::parse(vec);
 
         assert!(bloom.key_may_match("nmsl"));
 
