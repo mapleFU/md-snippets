@@ -1,14 +1,18 @@
-/// url shortener 利用 snowflake 生成 hash, 然后取 short url
-///
-///
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+#![feature(wrapping_int_impl)]
 
-use thiserror::Error;
+/// url shortener 利用 snowflake 生成 hash, 然后取 short url
 
 mod storage;
 
-use storage::Error as StorageError;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use std::num::Wrapping;
+
+use thiserror::Error;
+use snowflake::Node as SnowflakeNode;
+
+
+use crate::storage::Error as StorageError;
 
 pub struct UrlShortenerConfig {
     pub url_length: usize,
@@ -17,6 +21,7 @@ pub struct UrlShortenerConfig {
 pub struct UrlShortener {
     conf: UrlShortenerConfig,
 
+    uuid_helper: SnowflakeNode,
     storage: Box<dyn storage::Storage>,
 }
 
@@ -39,14 +44,15 @@ impl UrlShortener {
     pub fn generate_short_url(&mut self, long_url: impl AsRef<str>) -> Result<String> {
         let mut to_handle = long_url.as_ref().to_owned();
 
+        let mut t = DefaultHasher::new();
+        to_handle.as_str().hash(&mut t);
+        let mut base_id = Wrapping(t.finish());
         /// TODO(mwish): Do we need to handle extra timeout?
         loop {
-            let mut t = DefaultHasher::new();
-            to_handle.as_str().hash(&mut t);
-            let s = readable_fn(self.conf.url_length, t.finish());
+            let s = readable_fn(self.conf.url_length, base_id.0);
             let opt = self.storage.set_if_absent(s.as_ref(), long_url.as_ref())?;
             if opt.is_none() {
-                // to_handle +=
+                base_id += Wrapping(self.uuid_helper.generate().0 as u64);
                 continue;
             }
             return Ok(s);
@@ -58,6 +64,9 @@ impl UrlShortener {
 pub enum Error {
     #[error("storage error")]
     StorageError(#[from] StorageError),
+
+    #[error("snowflake error")]
+    SnowflakeError,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

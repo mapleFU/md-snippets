@@ -72,7 +72,7 @@ const SEQ_ID_RANGE: std::ops::Range<usize> = 0..12;
 /// | 1 Bit Unused | 41 Bit Timestamp |  10 Bit NodeID  |   12 Bit Sequence ID |
 /// +--------------------------------------------------------------------------+
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
-pub struct Id(i64);
+pub struct Id(pub i64);
 
 impl Id {
     pub fn new(node_id: i32, timestamp: i64, seq_id: i32) -> Id {

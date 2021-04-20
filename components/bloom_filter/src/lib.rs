@@ -176,7 +176,7 @@ impl BloomFilter {
 
 fn bloom_hash(s: impl AsRef<str>) -> u64 {
     let mut t = DefaultHasher::new();
-    s.as_ref().to_string().hash(&mut t);
+    s.as_ref().hash(&mut t);
     t.finish()
 }
 
@@ -203,6 +203,7 @@ mod tests {
         let vec = bloom.dump_filter();
         let bloom = BloomFilter::parse(vec);
 
+        let s: String = 
         assert!(bloom.key_may_match("nmsl"));
 
         assert!(!bloom.key_may_match("n"));
