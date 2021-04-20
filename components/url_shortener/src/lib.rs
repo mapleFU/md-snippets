@@ -1,16 +1,14 @@
 #![feature(wrapping_int_impl)]
 
 /// url shortener 利用 snowflake 生成 hash, 然后取 short url
-
 mod storage;
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::num::Wrapping;
 
-use thiserror::Error;
 use snowflake::Node as SnowflakeNode;
-
+use thiserror::Error;
 
 use crate::storage::Error as StorageError;
 
@@ -42,10 +40,9 @@ impl UrlShortener {
     ///
     /// TODO(mwish): Do we need to handle extra timeout.
     pub fn generate_short_url(&mut self, long_url: impl AsRef<str>) -> Result<String> {
-        let mut to_handle = long_url.as_ref().to_owned();
 
         let mut t = DefaultHasher::new();
-        to_handle.as_str().hash(&mut t);
+        long_url.as_ref().hash(&mut t);
         let mut base_id = Wrapping(t.finish());
         /// TODO(mwish): Do we need to handle extra timeout?
         loop {
