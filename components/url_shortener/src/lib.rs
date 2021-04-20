@@ -15,6 +15,7 @@ use crate::storage::Error as StorageError;
 
 pub struct UrlShortenerConfig {
     pub url_length: usize,
+    pub snowflake_id: i32,
 }
 
 pub struct UrlShortener {
@@ -22,6 +23,19 @@ pub struct UrlShortener {
 
     uuid_helper: SnowflakeNode,
     storage: Box<dyn storage::Storage>,
+}
+
+impl UrlShortener {
+    pub fn new(conf: UrlShortenerConfig) -> Result<Self> {
+        let snowflake = SnowflakeNode::new(conf.snowflake_id)?;
+        let storage = Box::new(storage::HashMapStorage::default());
+
+        Ok(Self {
+            conf,
+            uuid_helper: snowflake,
+            storage,
+        })
+    }
 }
 
 // see comment for readable_fn.
@@ -58,21 +72,21 @@ impl UrlShortener {
     /// If long url exists, return OK(long_url).
     /// If long url unexists, return OK(None).
     pub fn get_long_url(&self, short_url: impl AsRef<str>) -> Result<Option<String>> {
-        unimplemented!()
+        Ok(self.storage.get_content(short_url.as_ref())?)
     }
 
     /// Generate short url for long_url.
     /// This will generate readable_fn(hash(long_url + uuid * duplicate_cnt)).
     ///
-    /// TODO(mwish): Do we need to handle extra timeout.
+    /// TODO(mwish): Do we need to handle extra timeout?
     pub fn generate_short_url(&mut self, long_url: impl AsRef<str>) -> Result<String> {
         let mut t = DefaultHasher::new();
         long_url.as_ref().hash(&mut t);
         let mut base_id = Wrapping(t.finish());
-        /// TODO(mwish): Do we need to handle extra timeout?
+        // TODO(mwish): Do we need to handle extra timeout?
         loop {
             let s = readable_fn(self.conf.url_length, base_id.0);
-            let opt = self.storage.set_if_absent(s.as_ref(), long_url.as_ref())?;
+            let opt = self.storage.set_if_absent(long_url.as_ref(), s.as_ref())?;
             if opt.is_none() {
                 base_id += Wrapping(self.uuid_helper.generate().0 as u64);
                 continue;
@@ -88,7 +102,7 @@ pub enum Error {
     StorageError(#[from] StorageError),
 
     #[error("snowflake error")]
-    SnowflakeError,
+    SnowflakeError(#[from] std::time::SystemTimeError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -111,5 +125,33 @@ mod tests {
                 println!("{:?}", s);
             }
         }
+    }
+
+    #[test]
+    fn test_basic_hash_shortener() {
+        let conf = UrlShortenerConfig {
+            url_length: 8,
+            snowflake_id: 2,
+        };
+        let mut shortener = UrlShortener::new(conf).unwrap();
+
+        assert_eq!(shortener.get_long_url("nmsl").unwrap(), None);
+        let s = shortener.generate_short_url("nmsl").unwrap();
+        assert!(s.len() == 8);
+
+        assert_eq!(
+            shortener.get_long_url(&s).unwrap(),
+            Some("nmsl".to_string())
+        );
+
+        // construct duplication
+        let s2 = shortener.generate_short_url("nmsl").unwrap();
+        assert!(s2.len() == 8);
+        assert_eq!(
+            shortener.get_long_url(&s2).unwrap(),
+            Some("nmsl".to_string())
+        );
+
+        assert_ne!(s, s2);
     }
 }

@@ -19,7 +19,8 @@ pub trait Storage {
     fn get_content(&self, short_url: &str) -> Result<Option<String>>;
 }
 
-struct HashMapStorage {
+#[derive(Default)]
+pub struct HashMapStorage {
     hash_map: Arc<Mutex<HashMap<String, String>>>,
 }
 
@@ -30,13 +31,13 @@ impl Storage for HashMapStorage {
         if !opt.is_none() {
             return Ok(None);
         }
-        hash_map
-            .insert(short_url.to_owned(), long_url.to_owned())
-            .unwrap();
+        hash_map.insert(short_url.to_owned(), long_url.to_owned());
+        println!("put {:?} -> {:?}", short_url, long_url);
         Ok(Some(()))
     }
 
     fn get_content(&self, short_url: &str) -> Result<Option<String>> {
+        println!("get {:?} ", short_url);
         Ok(self.hash_map.lock().unwrap().get(short_url).cloned())
     }
 }
