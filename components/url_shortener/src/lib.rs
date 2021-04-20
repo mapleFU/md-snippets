@@ -9,13 +9,17 @@ use std::hash::{Hash, Hasher};
 use std::num::Wrapping;
 
 use snowflake::Node as SnowflakeNode;
-use thiserror::Error;
-
+use bloom_filter::BloomFilter;
+// use bloom_filter::Config as BloomFilterConfig;
 use crate::storage::Error as StorageError;
+
+use thiserror::Error;
 
 pub struct UrlShortenerConfig {
     pub url_length: usize,
     pub snowflake_id: i32,
+
+    pub use_bloom_filter: bool,
 }
 
 pub struct UrlShortener {
@@ -23,6 +27,10 @@ pub struct UrlShortener {
 
     uuid_helper: SnowflakeNode,
     storage: Box<dyn storage::Storage>,
+
+    /// 注: 只有单机处理且是内存处理的时候，才能设置 bf，算是一个很奇怪的优化了
+    #[allow(unused)]
+    bloom_filter: Option<BloomFilter>,
 }
 
 impl UrlShortener {
@@ -30,10 +38,18 @@ impl UrlShortener {
         let snowflake = SnowflakeNode::new(conf.snowflake_id)?;
         let storage = Box::new(storage::HashMapStorage::default());
 
+        let bloom_filter = if conf.use_bloom_filter {
+            unimplemented!()
+        } else {
+            None
+        };
+
         Ok(Self {
             conf,
             uuid_helper: snowflake,
             storage,
+
+            bloom_filter,
         })
     }
 }
