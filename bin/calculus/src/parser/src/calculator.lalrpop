@@ -49,5 +49,22 @@ pub Num: i32 = {
     },
     "-" <n: Num> => {
         -n
-    }
+    },
+    <s: r"[0-9]+\.[0-9]*([Ee][-+]?[0-9]+)?"> => {
+        let fv = f64::from_str(s).unwrap();
+        println!("fv is {}", fv);
+        fv as i32
+    },
+    <s: r"\.?[0-9]+([Ee][-+]?[0-9]+)?"> => {
+        let fv = f64::from_str(s).unwrap();
+        println!("fv is {}", fv);
+        fv as i32
+    },
+};
+
+match {
+    r"[0-9]+"
+} else {
+    r"\.?[0-9]+([Ee][-+]?[0-9]+)?",
+    _
 }
