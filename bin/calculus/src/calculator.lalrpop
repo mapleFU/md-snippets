@@ -41,4 +41,9 @@ pub Factor: i32 = {
 };
 
 // only pub will generate parser.
-pub Num: i32 = <s:r"[0-9]+"> => i32::from_str(s).unwrap();
+pub Num: i32 = { 
+    <s:r"[0-9]+"> => i32::from_str(s).unwrap(),
+    "(" <n: Expr> ")" => {
+        n
+    },
+}
