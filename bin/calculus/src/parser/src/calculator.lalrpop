@@ -1,0 +1,70 @@
+use std::str::FromStr;
+use crate::calculator_ast;
+
+grammar;
+
+pub Calcllist: i32 = {
+    <c: Calcllist> "\n" <e: Expr> => {
+        println!("= {:?}", e);
+        0
+    },
+    <c: Calcllist> "\n" => {
+        print!("> ");
+        0
+    },
+};
+
+// Expr is for mul / div
+pub Expr: calculator_ast::Number = {
+    <f: Factor> => {
+        // if it's a factor, just return itself.
+        f
+    },
+    <e: Expr> "+" <f: Factor> => {
+        e + f
+    },
+    <e: Expr> "-" <f: Factor> => {
+        e - f
+    },
+};
+
+
+pub Factor: calculator_ast::Number = {
+    <n: Num> => {
+        n
+    },
+    <f: Factor> "*" <n: Num> => {
+        f * n
+    },
+    <f: Factor> "/" <n: Num> => {
+        f / n
+    },
+};
+
+// only pub will generate parser.
+pub Num: calculator_ast::Number = { 
+    <s:r"[0-9]+"> => { 
+        calculator_ast::Number::from_i64(i64::from_str(s).unwrap())
+    },
+    "(" <e: Expr> ")" => {
+        e
+    },
+    "-" <n: Num> => {
+        -n
+    },
+    <s: r"[0-9]+\.[0-9]*([Ee][-+]?[0-9]+)?"> => {
+        let fv = f64::from_str(s).unwrap();
+        calculator_ast::Number::from_f64(fv)
+    },
+    <s: r"\.?[0-9]+([Ee][-+]?[0-9]+)?"> => {
+        let fv = f64::from_str(s).unwrap();
+        calculator_ast::Number::from_f64(fv)
+    },
+};
+
+match {
+    r"[0-9]+"
+} else {
+    r"\.?[0-9]+([Ee][-+]?[0-9]+)?",
+    _
+}

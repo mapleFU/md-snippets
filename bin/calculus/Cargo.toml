@@ -1,0 +1,14 @@
+[package]
+name = "calculus"
+version = "0.1.0"
+authors = ["mwish <anmmscs_maple@qq.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+calculus_parser = { path = "./src/parser" }
+
+# Add a build-time dependency on the lalrpop library:
+[build-dependencies]
+lalrpop = "0.19.5"
