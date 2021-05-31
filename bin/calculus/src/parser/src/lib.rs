@@ -35,4 +35,11 @@ fn calculator() {
             .parse("22 + 22 * ((((((22 - 22)))))) / 2")
             .unwrap()
     );
+
+    assert_eq!(
+        -22,
+        calculator::ExprParser::new()
+            .parse("-22 + 22 * ((((((22 - 22)))))) / 2")
+            .unwrap()
+    );
 }
