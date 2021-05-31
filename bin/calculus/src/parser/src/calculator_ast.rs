@@ -1,16 +1,6 @@
-pub enum Expr {
-    Number(i32),
-    Op(Box<Expr>, Opcode, Box<Expr>),
-}
+use std::fmt::Debug;
 
-pub enum Opcode {
-    Mul,
-    Div,
-    Add,
-    Sub,
-}
-
-// Note: we need to represent not only integers.
+/// Note: we need to represent not only integers.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Number {
     I64(i64),
@@ -118,6 +108,58 @@ impl std::ops::Neg for Number {
         match self {
             Number::I64(i) => Number::I64(-i),
             Number::F64(f) => Number::F64(-f),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Opcode {
+    Mul,
+    Div,
+    Add,
+    Sub,
+}
+
+
+pub enum Expr {
+    Number(Number),
+    OneOp(Opcode, Box<Expr>),
+    TwoOp(Opcode, Box<Expr>, Box<Expr>),
+}
+
+impl Debug for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { 
+        use self::Expr::*;
+
+        match *self {
+            Number(n) => write!(f, "{:?}", n),
+            OneOp(op, ref node) => write!(f, "({:?}: {:?})", op, node),
+            TwoOp(op, ref lnode, ref rnode) => write!(f, "({:?}: <{:?}, {:?}>)", op, lnode, rnode),
+        }
+    }
+}
+
+impl PartialEq for Expr { 
+    fn eq(&self, exp: &Expr) -> bool { 
+        match (self, exp) {
+            (Expr::Number(n1), Expr::Number(n2)) => {
+                n1 == n2
+            },
+            (Expr::OneOp(opc1, node1), Expr::OneOp(opc2, node2)) => {
+                if opc1 != opc2 {
+                    false
+                } else {
+                    node1.eq(node2)
+                }
+            },
+            (Expr::TwoOp(opc1, lnode1, rnode1), Expr::TwoOp(opc2, lnode2, rnode2)) => {
+                if opc1 != opc2 {
+                    false
+                } else {
+                    lnode1.eq(lnode2) && rnode1.eq(rnode2)
+                }
+            },
+            _ => false
         }
     }
 }

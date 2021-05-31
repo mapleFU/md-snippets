@@ -15,50 +15,86 @@ pub Calcllist: i32 = {
 };
 
 // Expr is for mul / div
-pub Expr: calculator_ast::Number = {
+pub Expr: calculator_ast::Expr = {
     <f: Factor> => {
         // if it's a factor, just return itself.
         f
     },
     <e: Expr> "+" <f: Factor> => {
-        e + f
+        let left = Box::new(e);
+        let right = Box::new(f);
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::Add,
+            left,
+            right
+        )
     },
     <e: Expr> "-" <f: Factor> => {
-        e - f
+        let left = Box::new(e);
+        let right = Box::new(f);
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::Sub,
+            left,
+            right
+        )
     },
 };
 
 
-pub Factor: calculator_ast::Number = {
+pub Factor: calculator_ast::Expr = {
     <n: Num> => {
         n
     },
     <f: Factor> "*" <n: Num> => {
-        f * n
+        let left = Box::new(f);
+        let right = Box::new(n);
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::Mul,
+            left,
+            right
+        )
     },
     <f: Factor> "/" <n: Num> => {
-        f / n
+        let left = Box::new(f);
+        let right = Box::new(n);
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::Div,
+            left,
+            right
+        )
     },
 };
 
 // only pub will generate parser.
-pub Num: calculator_ast::Number = { 
+pub Num: calculator_ast::Expr = { 
     <s:r"[0-9]+"> => { 
-        calculator_ast::Number::from_i64(i64::from_str(s).unwrap())
+        // return a number expr.
+        calculator_ast::Expr::Number(
+            calculator_ast::Number::from_i64(i64::from_str(s).unwrap())
+        )
     },
     "(" <e: Expr> ")" => {
+        // Just return itself
         e
     },
     "-" <n: Num> => {
-        -n
+        let node = Box::new(n);
+        calculator_ast::Expr::OneOp(
+            calculator_ast::Opcode::Sub,
+            node
+        )
     },
     <s: r"[0-9]+\.[0-9]*([Ee][-+]?[0-9]+)?"> => {
         let fv = f64::from_str(s).unwrap();
-        calculator_ast::Number::from_f64(fv)
+        calculator_ast::Expr::Number(
+            calculator_ast::Number::from_f64(fv)
+        )
     },
     <s: r"\.?[0-9]+([Ee][-+]?[0-9]+)?"> => {
         let fv = f64::from_str(s).unwrap();
-        calculator_ast::Number::from_f64(fv)
+        calculator_ast::Expr::Number(
+            calculator_ast::Number::from_f64(fv)
+        )
     },
 };
 
