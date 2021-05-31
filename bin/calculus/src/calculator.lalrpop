@@ -1,0 +1,44 @@
+use std::str::FromStr;
+
+grammar;
+
+pub Calcllist: i32 = {
+    <c: Calcllist> "\n" <e: Expr> => {
+        println!("= {:?}", e);
+        0
+    },
+    <c: Calcllist> "\n" => {
+        print!("> ");
+        0
+    },
+};
+
+// Expr is for mul / div
+pub Expr: i32 = {
+    <f: Factor> => {
+        // if it's a factor, just return itself.
+        f
+    },
+    <e: Expr> "+" <f: Factor> => {
+        e + f
+    },
+    <e: Expr> "-" <f: Factor> => {
+        e - f
+    },
+};
+
+
+pub Factor: i32 = {
+    <n: Num> => {
+        n
+    },
+    <f: Factor> "*" <n: Num> => {
+        f * n
+    },
+    <f: Factor> "/" <n: Num> => {
+        f / n
+    },
+};
+
+// only pub will generate parser.
+pub Num: i32 = <s:r"[0-9]+"> => i32::from_str(s).unwrap();
