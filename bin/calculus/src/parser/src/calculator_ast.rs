@@ -120,15 +120,34 @@ pub enum Opcode {
     Sub,
 }
 
-
 pub enum Expr {
     Number(Number),
     OneOp(Opcode, Box<Expr>),
     TwoOp(Opcode, Box<Expr>, Box<Expr>),
 }
 
+impl Expr {
+    pub fn eval(&self) -> Number {
+        match *self {
+            Expr::Number(n) => n,
+            Expr::OneOp(op, ref node) => match op {
+                Opcode::Sub => -node.eval(),
+                _ => {
+                    unreachable!();
+                }
+            },
+            Expr::TwoOp(op, ref lnode, ref rnode) => match op {
+                Opcode::Mul => lnode.eval() * rnode.eval(),
+                Opcode::Div => lnode.eval() / rnode.eval(),
+                Opcode::Add => lnode.eval() + rnode.eval(),
+                Opcode::Sub => lnode.eval() - rnode.eval(),
+            },
+        }
+    }
+}
+
 impl Debug for Expr {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { 
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         use self::Expr::*;
 
         match *self {
@@ -139,27 +158,26 @@ impl Debug for Expr {
     }
 }
 
-impl PartialEq for Expr { 
-    fn eq(&self, exp: &Expr) -> bool { 
+// TODO(mwish): sure I implements it, but why I need to fucking do this?
+impl PartialEq for Expr {
+    fn eq(&self, exp: &Expr) -> bool {
         match (self, exp) {
-            (Expr::Number(n1), Expr::Number(n2)) => {
-                n1 == n2
-            },
+            (Expr::Number(n1), Expr::Number(n2)) => n1 == n2,
             (Expr::OneOp(opc1, node1), Expr::OneOp(opc2, node2)) => {
                 if opc1 != opc2 {
                     false
                 } else {
                     node1.eq(node2)
                 }
-            },
+            }
             (Expr::TwoOp(opc1, lnode1, rnode1), Expr::TwoOp(opc2, lnode2, rnode2)) => {
                 if opc1 != opc2 {
                     false
                 } else {
                     lnode1.eq(lnode2) && rnode1.eq(rnode2)
                 }
-            },
-            _ => false
+            }
+            _ => false,
         }
     }
 }

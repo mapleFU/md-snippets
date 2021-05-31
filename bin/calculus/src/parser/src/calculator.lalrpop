@@ -3,16 +3,16 @@ use crate::calculator_ast;
 
 grammar;
 
-pub Calcllist: i32 = {
-    <c: Calcllist> "\n" <e: Expr> => {
-        println!("= {:?}", e);
-        0
-    },
-    <c: Calcllist> "\n" => {
-        print!("> ");
-        0
-    },
-};
+// pub Calcllist: i32 = {
+//     <c: Calcllist> "\n" <e: Expr> => {
+//         println!("= {:?}", e);
+//         0
+//     },
+//     <c: Calcllist> "\n" => {
+//         print!("> ");
+//         0
+//     },
+// };
 
 // Expr is for mul / div
 pub Expr: calculator_ast::Expr = {
