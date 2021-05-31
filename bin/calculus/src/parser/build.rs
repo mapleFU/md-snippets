@@ -5,7 +5,7 @@ fn main() {
         .emit_comments(true)
         .force_build(true)
         .unit_test()
-        .log_debug()
+        .log_info()
         .process_current_dir()
         .unwrap();
 }

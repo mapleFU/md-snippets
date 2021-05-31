@@ -11,18 +11,37 @@ pub enum Opcode {
 }
 
 // Note: we need to represent not only integers.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Number {
     I64(i64),
     F64(f64),
 }
 
 impl Default for Number {
-    fn default() -> Self { 
+    fn default() -> Self {
         Number::I64(0)
     }
 }
 
+// To use the `{}` marker, the trait `fmt::Display` must be implemented
+// manually for the type.
+impl std::fmt::Display for Number {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        // Write strictly the first element into the supplied output
+        // stream: `f`. Returns `fmt::Result` which indicates whether the
+        // operation succeeded or failed. Note that `write!` uses syntax which
+        // is very similar to `println!`.
+        match self {
+            Number::F64(fv) => {
+                write!(f, "F64({})", fv)
+            }
+            Number::I64(iv) => {
+                write!(f, "I64({})", iv)
+            }
+        }
+    }
+}
 
 impl Number {
     pub fn from_i64(i: i64) -> Self {
@@ -35,12 +54,15 @@ impl Number {
 
     pub fn as_f64(self) -> f64 {
         match self {
-            Number::I64(i) => {
-                i as f64
-            },
-            Number::F64(f) => {
-                f
-            }
+            Number::I64(i) => i as f64,
+            Number::F64(f) => f,
+        }
+    }
+
+    pub fn as_i64(self) -> i64 {
+        match self {
+            Number::I64(i) => i,
+            Number::F64(f) => f as i64,
         }
     }
 }
@@ -50,12 +72,8 @@ impl std::ops::Add for Number {
 
     fn add(self, other: Self) -> Self {
         match (self, other) {
-            (Number::I64(i1), Number::I64(i2)) => {
-                Number::I64(i1 + i2)
-            },
-            (v1, v2) => {
-                Number::F64(v1.as_f64() + v2.as_f64())
-            }
+            (Number::I64(i1), Number::I64(i2)) => Number::I64(i1 + i2),
+            (v1, v2) => Number::F64(v1.as_f64() + v2.as_f64()),
         }
     }
 }
@@ -65,12 +83,8 @@ impl std::ops::Mul for Number {
 
     fn mul(self, other: Self) -> Self {
         match (self, other) {
-            (Number::I64(i1), Number::I64(i2)) => {
-                Number::I64(i1 * i2)
-            },
-            (v1, v2) => {
-                Number::F64(v1.as_f64() * v2.as_f64())
-            }
+            (Number::I64(i1), Number::I64(i2)) => Number::I64(i1 * i2),
+            (v1, v2) => Number::F64(v1.as_f64() * v2.as_f64()),
         }
     }
 }
@@ -80,12 +94,30 @@ impl std::ops::Div for Number {
 
     fn div(self, other: Self) -> Self {
         match (self, other) {
-            (Number::I64(i1), Number::I64(i2)) => {
-                Number::I64(i1 * i2)
-            },
-            (v1, v2) => {
-                Number::F64(v1.as_f64() * v2.as_f64())
-            }
+            (Number::I64(i1), Number::I64(i2)) => Number::I64(i1 / i2),
+            (v1, v2) => Number::F64(v1.as_f64() / v2.as_f64()),
+        }
+    }
+}
+
+impl std::ops::Sub for Number {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        match (self, other) {
+            (Number::I64(i1), Number::I64(i2)) => Number::I64(i1 - i2),
+            (v1, v2) => Number::F64(v1.as_f64() - v2.as_f64()),
+        }
+    }
+}
+
+impl std::ops::Neg for Number {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        match self {
+            Number::I64(i) => Number::I64(-i),
+            Number::F64(f) => Number::F64(-f),
         }
     }
 }

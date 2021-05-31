@@ -11,16 +11,23 @@ fn calculator() {
     assert!(calculator::FactorParser::new().parse("22").is_ok());
     assert!(calculator::ExprParser::new().parse("22").is_ok());
 
-    assert_eq!(22, calculator::ExprParser::new().parse("22").unwrap());
+    assert_eq!(
+        22,
+        calculator::ExprParser::new().parse("22").unwrap().as_i64()
+    );
     assert_eq!(
         22 + 22 * 22,
-        calculator::ExprParser::new().parse("22 + 22 * 22").unwrap()
+        calculator::ExprParser::new()
+            .parse("22 + 22 * 22")
+            .unwrap()
+            .as_i64()
     );
     assert_eq!(
         22 + 22 * 22 - 22 / 2,
         calculator::ExprParser::new()
             .parse("22 + 22 * 22 - 22 / 2")
             .unwrap()
+            .as_i64()
     );
 
     assert_eq!(
@@ -28,12 +35,14 @@ fn calculator() {
         calculator::ExprParser::new()
             .parse("22 + 22 * (22 - 22) / 2")
             .unwrap()
+            .as_i64()
     );
     assert_eq!(
         22,
         calculator::ExprParser::new()
             .parse("22 + 22 * ((((((22 - 22)))))) / 2")
             .unwrap()
+            .as_i64()
     );
 
     assert_eq!(
@@ -41,5 +50,6 @@ fn calculator() {
         calculator::ExprParser::new()
             .parse("-22 + 22 * ((((((22 - 22)))))) / 2")
             .unwrap()
+            .as_i64()
     );
 }

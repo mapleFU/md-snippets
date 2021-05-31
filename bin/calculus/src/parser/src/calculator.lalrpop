@@ -15,7 +15,7 @@ pub Calcllist: i32 = {
 };
 
 // Expr is for mul / div
-pub Expr: i32 = {
+pub Expr: calculator_ast::Number = {
     <f: Factor> => {
         // if it's a factor, just return itself.
         f
@@ -29,7 +29,7 @@ pub Expr: i32 = {
 };
 
 
-pub Factor: i32 = {
+pub Factor: calculator_ast::Number = {
     <n: Num> => {
         n
     },
@@ -42,8 +42,10 @@ pub Factor: i32 = {
 };
 
 // only pub will generate parser.
-pub Num: i32 = { 
-    <s:r"[0-9]+"> => i32::from_str(s).unwrap(),
+pub Num: calculator_ast::Number = { 
+    <s:r"[0-9]+"> => { 
+        calculator_ast::Number::from_i64(i64::from_str(s).unwrap())
+    },
     "(" <e: Expr> ")" => {
         e
     },
@@ -52,13 +54,11 @@ pub Num: i32 = {
     },
     <s: r"[0-9]+\.[0-9]*([Ee][-+]?[0-9]+)?"> => {
         let fv = f64::from_str(s).unwrap();
-        println!("fv is {}", fv);
-        fv as i32
+        calculator_ast::Number::from_f64(fv)
     },
     <s: r"\.?[0-9]+([Ee][-+]?[0-9]+)?"> => {
         let fv = f64::from_str(s).unwrap();
-        println!("fv is {}", fv);
-        fv as i32
+        calculator_ast::Number::from_f64(fv)
     },
 };
 
