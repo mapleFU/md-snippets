@@ -64,4 +64,13 @@ fn calculator() {
             .eval()
             .as_i64()
     );
+
+    assert_eq!(
+        -22,
+        calculator::ExprParser::new()
+            .parse("a = -22")
+            .unwrap()
+            .eval()
+            .as_i64()
+    );
 }

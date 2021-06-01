@@ -1,5 +1,5 @@
-use std::fmt::Debug;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 /// Note: we need to represent not only integers.
@@ -122,23 +122,24 @@ pub enum Opcode {
     Sub,
 
     // operations about assign and fetch
-    
-    Assign, 
+    Assign,
     Ref,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum BuiltinFunc {
-    Sqrt,
-    Exp,
-    Log,
-    Print,
-}
+// #[derive(Clone, Copy, Debug, PartialEq)]
+// enum BuiltinFunc {
+//     Sqrt,
+//     Exp,
+//     Log,
+//     Print,
+// }
 
 pub enum Expr {
     Number(Number),
     OneOp(Opcode, Box<Expr>),
     TwoOp(Opcode, Box<Expr>, Box<Expr>),
+    VarRef(String),
+    Assign(String, Box<Expr>),
 }
 
 impl Expr {
@@ -158,8 +159,26 @@ impl Expr {
                 Opcode::Sub => lnode.eval() - rnode.eval(),
                 _ => {
                     unreachable!()
-                },
+                }
             },
+            Expr::VarRef(ref name) => {
+                let table = SYMBOL_TABLE.lock().unwrap();
+                match table.get(name) {
+                    Some(symbol) => symbol.value,
+                    None => {
+                        unimplemented!();
+                    }
+                }
+            }
+            Expr::Assign(ref name, ref rnode) => {
+                let mut table = SYMBOL_TABLE.lock().unwrap();
+                let v = rnode.eval();
+                table.entry(name.into()).or_insert(Symbol {
+                    name: name.into(),
+                    value: v,
+                });
+                v
+            }
         }
     }
 }
@@ -172,6 +191,8 @@ impl Debug for Expr {
             Number(n) => write!(f, "{:?}", n),
             OneOp(op, ref node) => write!(f, "({:?}: {:?})", op, node),
             TwoOp(op, ref lnode, ref rnode) => write!(f, "({:?}: <{:?}, {:?}>)", op, lnode, rnode),
+            VarRef(ref v) => write!(f, "var({:?})", v),
+            Assign(ref name, ref rnode) => write!(f, "({:?} = {:?})", name, rnode),
         }
     }
 }
@@ -201,8 +222,8 @@ impl PartialEq for Expr {
     }
 }
 
-
 // Below are fields for symbol
+#[derive(Clone, Debug)]
 struct Symbol {
     name: String,
     value: Number,
@@ -210,7 +231,7 @@ struct Symbol {
 
 lazy_static! {
     // Note: maybe using dashmap is better.
-    static ref SymbolTable: Arc<Mutex<HashMap<String, Symbol>>> = {
+    static ref SYMBOL_TABLE: Arc<Mutex<HashMap<String, Symbol>>> = {
         Arc::new(Mutex::new(HashMap::new()))
     };
 }

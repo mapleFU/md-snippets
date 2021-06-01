@@ -18,7 +18,10 @@ pub Expr: calculator_ast::Expr = {
     MulExpr,
     // 这个表达式是右结合的，所以在右侧
     <s: VarName> "=" <e: Expr> => {
-        unimplemented!()
+        calculator_ast::Expr::Assign(
+            s.into(),
+            Box::new(e),
+        )
     },
 }
 
