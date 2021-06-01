@@ -1,4 +1,6 @@
 use std::fmt::Debug;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// Note: we need to represent not only integers.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -118,6 +120,19 @@ pub enum Opcode {
     Div,
     Add,
     Sub,
+
+    // operations about assign and fetch
+    
+    Assign, 
+    Ref,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum BuiltinFunc {
+    Sqrt,
+    Exp,
+    Log,
+    Print,
 }
 
 pub enum Expr {
@@ -141,6 +156,9 @@ impl Expr {
                 Opcode::Div => lnode.eval() / rnode.eval(),
                 Opcode::Add => lnode.eval() + rnode.eval(),
                 Opcode::Sub => lnode.eval() - rnode.eval(),
+                _ => {
+                    unreachable!()
+                },
             },
         }
     }
@@ -181,4 +199,18 @@ impl PartialEq for Expr {
             _ => false,
         }
     }
+}
+
+
+// Below are fields for symbol
+struct Symbol {
+    name: String,
+    value: Number,
+}
+
+lazy_static! {
+    // Note: maybe using dashmap is better.
+    static ref SymbolTable: Arc<Mutex<HashMap<String, Symbol>>> = {
+        Arc::new(Mutex::new(HashMap::new()))
+    };
 }

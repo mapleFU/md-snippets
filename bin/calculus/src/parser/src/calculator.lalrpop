@@ -14,10 +14,18 @@ grammar;
 //     },
 // };
 
-// Expr is for mul / div
 pub Expr: calculator_ast::Expr = {
+    MulExpr,
+    // 这个表达式是右结合的，所以在右侧
+    <s: VarName> "=" <e: Expr> => {
+        unimplemented!()
+    },
+}
+
+// Expr is for mul / div
+pub MulExpr: calculator_ast::Expr = {
     Factor,
-    <e: Expr> "+" <f: Factor> => {
+    <e: MulExpr> "+" <f: Factor> => {
         let left = Box::new(e);
         let right = Box::new(f);
         calculator_ast::Expr::TwoOp(
@@ -26,7 +34,7 @@ pub Expr: calculator_ast::Expr = {
             right
         )
     },
-    <e: Expr> "-" <f: Factor> => {
+    <e: MulExpr> "-" <f: Factor> => {
         let left = Box::new(e);
         let right = Box::new(f);
         calculator_ast::Expr::TwoOp(
@@ -94,7 +102,13 @@ pub Num: calculator_ast::Expr = {
 };
 
 match {
-    r"[0-9]+"
+    r"[0-9]+",
+
+    r"[a-zA-Z][a-zA-Z0-9]*" => VarName,
+    // skip whitespaces
+    r"\s*" => { },
+    r"//[^\n\r]*[\n\r]*" => { }, // `// comment`
+    r"/\*([^\*]*\*+[^\*/])*([^\*]*\*+|[^\*])*\*/" => { }, // `/* comment */`
 } else {
     r"\.?[0-9]+([Ee][-+]?[0-9]+)?",
     _

@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate lalrpop_util;
 
+#[macro_use]
+extern crate lazy_static;
+
 lalrpop_mod!(pub calculator); // synthesized by LALRPOP
 
 pub mod calculator_ast;
