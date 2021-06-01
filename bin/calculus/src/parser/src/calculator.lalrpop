@@ -16,10 +16,7 @@ grammar;
 
 // Expr is for mul / div
 pub Expr: calculator_ast::Expr = {
-    <f: Factor> => {
-        // if it's a factor, just return itself.
-        f
-    },
+    Factor,
     <e: Expr> "+" <f: Factor> => {
         let left = Box::new(e);
         let right = Box::new(f);
@@ -42,9 +39,7 @@ pub Expr: calculator_ast::Expr = {
 
 
 pub Factor: calculator_ast::Expr = {
-    <n: Num> => {
-        n
-    },
+    Num,
     <f: Factor> "*" <n: Num> => {
         let left = Box::new(f);
         let right = Box::new(n);

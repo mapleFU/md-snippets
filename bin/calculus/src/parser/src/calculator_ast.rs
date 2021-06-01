@@ -158,7 +158,8 @@ impl Debug for Expr {
     }
 }
 
-// TODO(mwish): sure I implements it, but why I need to fucking do this?
+// unit_test in lalrpop config will require Eq for testing.
+#[cfg(test)]
 impl PartialEq for Expr {
     fn eq(&self, exp: &Expr) -> bool {
         match (self, exp) {
