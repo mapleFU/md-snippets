@@ -1,16 +1,8 @@
-pub enum Expr {
-    Number(i32),
-    Op(Box<Expr>, Opcode, Box<Expr>),
-}
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::sync::{Arc, Mutex};
 
-pub enum Opcode {
-    Mul,
-    Div,
-    Add,
-    Sub,
-}
-
-// Note: we need to represent not only integers.
+/// Note: we need to represent not only integers.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Number {
     I64(i64),
@@ -120,4 +112,126 @@ impl std::ops::Neg for Number {
             Number::F64(f) => Number::F64(-f),
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Opcode {
+    Mul,
+    Div,
+    Add,
+    Sub,
+
+    // operations about assign and fetch
+    Assign,
+    Ref,
+}
+
+// #[derive(Clone, Copy, Debug, PartialEq)]
+// enum BuiltinFunc {
+//     Sqrt,
+//     Exp,
+//     Log,
+//     Print,
+// }
+
+pub enum Expr {
+    Number(Number),
+    OneOp(Opcode, Box<Expr>),
+    TwoOp(Opcode, Box<Expr>, Box<Expr>),
+    VarRef(String),
+    Assign(String, Box<Expr>),
+}
+
+impl Expr {
+    pub fn eval(&self) -> Number {
+        match *self {
+            Expr::Number(n) => n,
+            Expr::OneOp(op, ref node) => match op {
+                Opcode::Sub => -node.eval(),
+                _ => {
+                    unreachable!();
+                }
+            },
+            Expr::TwoOp(op, ref lnode, ref rnode) => match op {
+                Opcode::Mul => lnode.eval() * rnode.eval(),
+                Opcode::Div => lnode.eval() / rnode.eval(),
+                Opcode::Add => lnode.eval() + rnode.eval(),
+                Opcode::Sub => lnode.eval() - rnode.eval(),
+                _ => {
+                    unreachable!()
+                }
+            },
+            Expr::VarRef(ref name) => {
+                let table = SYMBOL_TABLE.lock().unwrap();
+                match table.get(name) {
+                    Some(symbol) => symbol.value,
+                    None => {
+                        unimplemented!();
+                    }
+                }
+            }
+            Expr::Assign(ref name, ref rnode) => {
+                let mut table = SYMBOL_TABLE.lock().unwrap();
+                let v = rnode.eval();
+                table.entry(name.into()).or_insert(Symbol {
+                    name: name.into(),
+                    value: v,
+                });
+                v
+            }
+        }
+    }
+}
+
+impl Debug for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use self::Expr::*;
+
+        match *self {
+            Number(n) => write!(f, "{:?}", n),
+            OneOp(op, ref node) => write!(f, "({:?}: {:?})", op, node),
+            TwoOp(op, ref lnode, ref rnode) => write!(f, "({:?}: <{:?}, {:?}>)", op, lnode, rnode),
+            VarRef(ref v) => write!(f, "var({:?})", v),
+            Assign(ref name, ref rnode) => write!(f, "({:?} = {:?})", name, rnode),
+        }
+    }
+}
+
+// unit_test in lalrpop config will require Eq for testing.
+#[cfg(test)]
+impl PartialEq for Expr {
+    fn eq(&self, exp: &Expr) -> bool {
+        match (self, exp) {
+            (Expr::Number(n1), Expr::Number(n2)) => n1 == n2,
+            (Expr::OneOp(opc1, node1), Expr::OneOp(opc2, node2)) => {
+                if opc1 != opc2 {
+                    false
+                } else {
+                    node1.eq(node2)
+                }
+            }
+            (Expr::TwoOp(opc1, lnode1, rnode1), Expr::TwoOp(opc2, lnode2, rnode2)) => {
+                if opc1 != opc2 {
+                    false
+                } else {
+                    lnode1.eq(lnode2) && rnode1.eq(rnode2)
+                }
+            }
+            _ => false,
+        }
+    }
+}
+
+// Below are fields for symbol
+#[derive(Clone, Debug)]
+struct Symbol {
+    name: String,
+    value: Number,
+}
+
+lazy_static! {
+    // Note: maybe using dashmap is better.
+    static ref SYMBOL_TABLE: Arc<Mutex<HashMap<String, Symbol>>> = {
+        Arc::new(Mutex::new(HashMap::new()))
+    };
 }

@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate lalrpop_util;
 
+#[macro_use]
+extern crate lazy_static;
+
 lalrpop_mod!(pub calculator); // synthesized by LALRPOP
 
 pub mod calculator_ast;
@@ -13,13 +16,18 @@ fn calculator() {
 
     assert_eq!(
         22,
-        calculator::ExprParser::new().parse("22").unwrap().as_i64()
+        calculator::ExprParser::new()
+            .parse("22")
+            .unwrap()
+            .eval()
+            .as_i64()
     );
     assert_eq!(
         22 + 22 * 22,
         calculator::ExprParser::new()
             .parse("22 + 22 * 22")
             .unwrap()
+            .eval()
             .as_i64()
     );
     assert_eq!(
@@ -27,6 +35,7 @@ fn calculator() {
         calculator::ExprParser::new()
             .parse("22 + 22 * 22 - 22 / 2")
             .unwrap()
+            .eval()
             .as_i64()
     );
 
@@ -35,6 +44,7 @@ fn calculator() {
         calculator::ExprParser::new()
             .parse("22 + 22 * (22 - 22) / 2")
             .unwrap()
+            .eval()
             .as_i64()
     );
     assert_eq!(
@@ -42,6 +52,7 @@ fn calculator() {
         calculator::ExprParser::new()
             .parse("22 + 22 * ((((((22 - 22)))))) / 2")
             .unwrap()
+            .eval()
             .as_i64()
     );
 
@@ -50,6 +61,16 @@ fn calculator() {
         calculator::ExprParser::new()
             .parse("-22 + 22 * ((((((22 - 22)))))) / 2")
             .unwrap()
+            .eval()
+            .as_i64()
+    );
+
+    assert_eq!(
+        -22,
+        calculator::ExprParser::new()
+            .parse("a = -22")
+            .unwrap()
+            .eval()
             .as_i64()
     );
 }

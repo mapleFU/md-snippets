@@ -3,67 +3,115 @@ use crate::calculator_ast;
 
 grammar;
 
-pub Calcllist: i32 = {
-    <c: Calcllist> "\n" <e: Expr> => {
-        println!("= {:?}", e);
-        0
+// pub Calcllist: i32 = {
+//     <c: Calcllist> "\n" <e: Expr> => {
+//         println!("= {:?}", e);
+//         0
+//     },
+//     <c: Calcllist> "\n" => {
+//         print!("> ");
+//         0
+//     },
+// };
+
+pub Expr: calculator_ast::Expr = {
+    MulExpr,
+    // 这个表达式是右结合的，所以在右侧
+    <s: VarName> "=" <e: Expr> => {
+        calculator_ast::Expr::Assign(
+            s.into(),
+            Box::new(e),
+        )
     },
-    <c: Calcllist> "\n" => {
-        print!("> ");
-        0
-    },
-};
+}
 
 // Expr is for mul / div
-pub Expr: calculator_ast::Number = {
-    <f: Factor> => {
-        // if it's a factor, just return itself.
-        f
+pub MulExpr: calculator_ast::Expr = {
+    Factor,
+    <e: MulExpr> "+" <f: Factor> => {
+        let left = Box::new(e);
+        let right = Box::new(f);
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::Add,
+            left,
+            right
+        )
     },
-    <e: Expr> "+" <f: Factor> => {
-        e + f
-    },
-    <e: Expr> "-" <f: Factor> => {
-        e - f
+    <e: MulExpr> "-" <f: Factor> => {
+        let left = Box::new(e);
+        let right = Box::new(f);
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::Sub,
+            left,
+            right
+        )
     },
 };
 
 
-pub Factor: calculator_ast::Number = {
-    <n: Num> => {
-        n
-    },
+pub Factor: calculator_ast::Expr = {
+    Num,
     <f: Factor> "*" <n: Num> => {
-        f * n
+        let left = Box::new(f);
+        let right = Box::new(n);
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::Mul,
+            left,
+            right
+        )
     },
     <f: Factor> "/" <n: Num> => {
-        f / n
+        let left = Box::new(f);
+        let right = Box::new(n);
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::Div,
+            left,
+            right
+        )
     },
 };
 
 // only pub will generate parser.
-pub Num: calculator_ast::Number = { 
+pub Num: calculator_ast::Expr = { 
     <s:r"[0-9]+"> => { 
-        calculator_ast::Number::from_i64(i64::from_str(s).unwrap())
+        // return a number expr.
+        calculator_ast::Expr::Number(
+            calculator_ast::Number::from_i64(i64::from_str(s).unwrap())
+        )
     },
     "(" <e: Expr> ")" => {
+        // Just return itself
         e
     },
     "-" <n: Num> => {
-        -n
+        let node = Box::new(n);
+        calculator_ast::Expr::OneOp(
+            calculator_ast::Opcode::Sub,
+            node
+        )
     },
     <s: r"[0-9]+\.[0-9]*([Ee][-+]?[0-9]+)?"> => {
         let fv = f64::from_str(s).unwrap();
-        calculator_ast::Number::from_f64(fv)
+        calculator_ast::Expr::Number(
+            calculator_ast::Number::from_f64(fv)
+        )
     },
     <s: r"\.?[0-9]+([Ee][-+]?[0-9]+)?"> => {
         let fv = f64::from_str(s).unwrap();
-        calculator_ast::Number::from_f64(fv)
+        calculator_ast::Expr::Number(
+            calculator_ast::Number::from_f64(fv)
+        )
     },
 };
 
 match {
-    r"[0-9]+"
+    r"[0-9]+",
+
+    r"[a-zA-Z][a-zA-Z0-9]*" => VarName,
+    // skip whitespaces
+    r"\s*" => { },
+    r"//[^\n\r]*[\n\r]*" => { }, // `// comment`
+    r"/\*([^\*]*\*+[^\*/])*([^\*]*\*+|[^\*])*\*/" => { }, // `/* comment */`
 } else {
     r"\.?[0-9]+([Ee][-+]?[0-9]+)?",
     _
