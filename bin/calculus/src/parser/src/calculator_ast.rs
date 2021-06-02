@@ -1,4 +1,5 @@
 use std::{collections::{HashMap, LinkedList}};
+use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -8,6 +9,8 @@ use std::sync::{Arc, Mutex};
 pub enum Number {
     I64(i64),
     F64(f64),
+
+    Bool(bool),
 }
 
 impl Default for Number {
@@ -25,6 +28,9 @@ impl std::fmt::Display for Number {
             Number::I64(iv) => {
                 write!(f, "I64({})", iv)
             }
+            Number::Bool(b) => {
+                write!(f, "Bool({})", b)
+            }
         }
     }
 }
@@ -38,10 +44,17 @@ impl Number {
         Number::F64(f)
     }
 
+    pub fn from_bool(b: bool) -> Self {
+        Number::Bool(b)
+    }
+
     pub fn as_f64(self) -> f64 {
         match self {
             Number::I64(i) => i as f64,
             Number::F64(f) => f,
+            Number::Bool(_) => {
+                unimplemented!()
+            }
         }
     }
 
@@ -49,6 +62,17 @@ impl Number {
         match self {
             Number::I64(i) => i,
             Number::F64(f) => f as i64,
+            Number::Bool(_) => {
+                unimplemented!()
+            }
+        }
+    }
+
+    pub fn as_bool(self) -> bool {
+        match self {
+            Number::I64(i) => i != 0,
+            Number::F64(f) => f != 0f64,
+            Number::Bool(b) => b,
         }
     }
 }
@@ -104,6 +128,23 @@ impl std::ops::Neg for Number {
         match self {
             Number::I64(i) => Number::I64(-i),
             Number::F64(f) => Number::F64(-f),
+            Number::Bool(_) => {
+                unimplemented!()
+            }
+        }
+    }
+}
+
+impl PartialOrd for Number {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self, other) {
+            (_, Number::Bool(_)) => {
+                unimplemented!()
+            }
+            (Number::Bool(_), _) => {
+                unimplemented!()
+            }
+            (a, b) => a.as_f64().partial_cmp(&b.as_f64()),
         }
     }
 }
@@ -118,6 +159,13 @@ pub enum Opcode {
     // operations about assign and fetch
     Assign,
     Ref,
+
+    // comparing
+    Equal,
+    LargerOrEqual,
+    LargerThan,
+    LessOrEqual,
+    LessThan,
 }
 
 // #[derive(Clone, Copy, Debug, PartialEq)]
@@ -131,6 +179,8 @@ pub enum Opcode {
 pub enum Expr {
     Number(Number),
     OneOp(Opcode, Box<Expr>),
+    // Include:
+    // "+" "-" "*" "/" and comparing.
     TwoOp(Opcode, Box<Expr>, Box<Expr>),
     VarRef(String),
     Assign(String, Box<Expr>),
@@ -189,6 +239,12 @@ impl Expr {
                 Opcode::Div => lnode.eval() / rnode.eval(),
                 Opcode::Add => lnode.eval() + rnode.eval(),
                 Opcode::Sub => lnode.eval() - rnode.eval(),
+                Opcode::Equal => Number::from_bool(lnode.eval() == rnode.eval()),
+                Opcode::LargerOrEqual => Number::from_bool(lnode.eval() >= rnode.eval()),
+                Opcode::LargerThan => Number::from_bool(lnode.eval() > rnode.eval()),
+                Opcode::LessOrEqual => Number::from_bool(lnode.eval() <= rnode.eval()),
+                Opcode::LessThan => Number::from_bool(lnode.eval() < rnode.eval()),
+
                 _ => {
                     unreachable!()
                 }

@@ -66,12 +66,52 @@ pub List: calculator_ast::ExprList = {
 };
 
 pub Expr: calculator_ast::Expr = {
-    MulExpr,
+    CmpAndFnExpr,
     // 这个表达式是右结合的，所以在右侧
     <s: VarName> "=" <e: Expr> => {
         calculator_ast::Expr::Assign(
             s.into(),
             Box::new(e),
+        )
+    },
+}
+
+// Comparing 没有优先级
+pub CmpAndFnExpr: calculator_ast::Expr = {
+    MulExpr,
+    <left: CmpAndFnExpr> Equal <right: MulExpr> => {
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::Equal,
+            Box::new(left),
+            Box::new(right)
+        )
+    },
+    <s: CmpAndFnExpr> LargerOrEqual <e: MulExpr> => {
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::LargerOrEqual,
+            Box::new(s),
+            Box::new(e)
+        )
+    },
+    <s: CmpAndFnExpr> LargerThan <e: MulExpr> => {
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::LargerThan,
+            Box::new(s),
+            Box::new(e)
+        )
+    },
+    <s: CmpAndFnExpr> LessOrEqual <e: MulExpr> => {
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::LessOrEqual,
+            Box::new(s),
+            Box::new(e)
+        )
+    },
+    <s: CmpAndFnExpr> LessThan <e: MulExpr> => {
+        calculator_ast::Expr::TwoOp(
+            calculator_ast::Opcode::LessThan,
+            Box::new(s),
+            Box::new(e)
         )
     },
 }
@@ -161,6 +201,12 @@ match {
 } else {
     r"\.?[0-9]+([Ee][-+]?[0-9]+)?",
 
+    "==" => Equal,
+    ">=" => LargerOrEqual,
+    ">" => LargerThan,
+    "<=" => LessOrEqual,
+    "<" => LessThan,
+ 
     r"[a-zA-Z][a-zA-Z0-9]*" => VarName,
 
     "if" => IF,
@@ -171,7 +217,6 @@ match {
     r"\s*" => { },
     r"//[^\n\r]*[\n\r]*" => { }, // `// comment`
     r"/\*([^\*]*\*+[^\*/])*([^\*]*\*+|[^\*])*\*/" => { }, // `/* comment */`
-
 
     _
 }
