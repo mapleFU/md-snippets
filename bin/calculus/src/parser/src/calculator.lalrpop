@@ -1,4 +1,7 @@
 use std::str::FromStr;
+use std::rc::Rc;
+use std::collections::LinkedList;
+
 use crate::calculator_ast;
 
 grammar;
@@ -13,6 +16,54 @@ grammar;
 //         0
 //     },
 // };
+
+pub Statement: calculator_ast::Expr = {
+    <e: Expr> => {
+        e
+    },
+    IF <e: Expr> THEN <l1: List> ELSE <l2: List> => {
+        let cond = Box::new(e);
+        let if_branch = l1;
+        let else_branch = l2;
+
+        let flow = calculator_ast::ControlFlow::Condition(calculator_ast::IfCondition {
+            cond,
+            if_branch,
+            else_branch: Some(else_branch),
+        });
+
+        calculator_ast::Expr::Flow(flow)
+    },
+    IF <e: Expr> THEN <l: List> => {
+        let cond = Box::new(e);
+        let if_branch = l;
+
+        let flow = calculator_ast::ControlFlow::Condition(calculator_ast::IfCondition {
+            cond,
+            if_branch,
+            else_branch: None,
+        });
+
+        calculator_ast::Expr::Flow(flow)
+    },
+}; 
+
+pub List: calculator_ast::ExprList = {
+    () => {
+        calculator_ast::ExprList(None)
+    },
+    <stmt: Statement> ";" <l: List> => {
+        if l.0.is_none() {
+            let mut new_list = LinkedList::default();
+            new_list.push_back(Rc::new(stmt));
+            calculator_ast::ExprList(Some(new_list))
+        } else {
+            let mut new_list = l.0.unwrap().clone();
+            new_list.push_back(Rc::new(stmt));
+            calculator_ast::ExprList(Some(new_list))
+        }
+    }
+};
 
 pub Expr: calculator_ast::Expr = {
     MulExpr,
@@ -107,12 +158,20 @@ pub Num: calculator_ast::Expr = {
 match {
     r"[0-9]+",
 
+} else {
+    r"\.?[0-9]+([Ee][-+]?[0-9]+)?",
+
     r"[a-zA-Z][a-zA-Z0-9]*" => VarName,
+
+    "if" => IF,
+    "then" => THEN,
+    "else" => ELSE,
+    
     // skip whitespaces
     r"\s*" => { },
     r"//[^\n\r]*[\n\r]*" => { }, // `// comment`
     r"/\*([^\*]*\*+[^\*/])*([^\*]*\*+|[^\*])*\*/" => { }, // `/* comment */`
-} else {
-    r"\.?[0-9]+([Ee][-+]?[0-9]+)?",
+
+
     _
 }
