@@ -113,12 +113,10 @@ fn stmt_test() {
             .as_i64()
     );
 
-    assert_eq!(
-        3,
-        calculator::ListParser::new()
-            .parse("a = 1 ; if ( a == 2 )  then { 3 } else { 5 }")
-            .unwrap()
-            .eval()
-            .as_i64()
-    );
+    let expr = calculator::ListParser::new()
+        .parse("a = 1 ; if ( a == 2 )  then { 3 } else { 5 }")
+        .unwrap();
+    println!("Debugging: Expr is :{:?}", expr);
+
+    assert_eq!(5, expr.eval().as_i64());
 }

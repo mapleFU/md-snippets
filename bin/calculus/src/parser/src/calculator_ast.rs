@@ -214,12 +214,14 @@ impl Debug for ExprList {
     }
 }
 
+#[derive(Debug)]
 pub struct IfCondition {
     pub cond: Box<Expr>,
     pub if_branch: ExprList,
     pub else_branch: Option<ExprList>,
 }
 
+#[derive(Debug)]
 pub enum ControlFlow {
     Condition(IfCondition),
 }
@@ -261,10 +263,11 @@ impl Expr {
             Expr::Assign(ref name, ref rnode) => {
                 let mut table = SYMBOL_TABLE.lock().unwrap();
                 let v = rnode.eval();
-                table.entry(name.into()).or_insert(Symbol {
+                let mut v_ref = table.entry(name.into()).or_insert(Symbol {
                     name: name.into(),
                     value: v,
                 });
+                v_ref.value = v;
                 v
             }
             Expr::Flow(ref flow) => {
@@ -296,14 +299,11 @@ impl Debug for Expr {
             TwoOp(op, ref lnode, ref rnode) => write!(f, "({:?}: <{:?}, {:?}>)", op, lnode, rnode),
             VarRef(ref v) => write!(f, "var({:?})", v),
             Assign(ref name, ref rnode) => write!(f, "({:?} = {:?})", name, rnode),
-            Flow(ref flow) => {
-                match flow {
-                    ControlFlow::Condition(if_cond) => {
-                        write!(f, "Flow(If({:?}, then: {:?})", if_cond.cond, if_cond.if_branch)
-                    }
+            Flow(ref flow) => match flow {
+                ControlFlow::Condition(if_cond) => {
+                    write!(f, "Flow({:?})", if_cond)
                 }
-                
-            }
+            },
         }
     }
 }
