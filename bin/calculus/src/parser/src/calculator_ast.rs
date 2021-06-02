@@ -1,4 +1,4 @@
-use std::collections::{HashMap, LinkedList};
+use std::{collections::{HashMap, LinkedList}};
 use std::fmt::Debug;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -140,6 +140,20 @@ pub enum Expr {
 #[derive(Clone)]
 pub struct ExprList(pub Option<LinkedList<Rc<Expr>>>);
 
+impl ExprList {
+    /// Executing all the expressions, and return the last one.
+    /// If no expression provided, return I64(0).
+    pub fn eval(&self) -> Number {
+        self.0.as_ref().map_or(Number::default(), |list| {
+            let mut n = Number::default();
+            for expr_rc in list.iter() {
+                n = expr_rc.as_ref().eval();
+            };
+            n
+        })
+    }
+}
+
 impl Debug for ExprList {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "(")?;
@@ -197,8 +211,16 @@ impl Expr {
                 });
                 v
             }
-            Expr::Flow(_) => {
-                unimplemented!()
+            Expr::Flow(ref flow) => {
+                let resp = Number::default();
+                match flow {
+                    ControlFlow::Condition(ref conf) => {
+                        // It must be a boolean value.
+                        unimplemented!()
+                    }
+                }
+
+                resp
             }
         }
     }
