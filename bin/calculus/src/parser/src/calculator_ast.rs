@@ -1,5 +1,5 @@
-use std::{collections::{HashMap, LinkedList}};
 use std::cmp::Ordering;
+use std::collections::{HashMap, LinkedList};
 use std::fmt::Debug;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -198,7 +198,7 @@ impl ExprList {
             let mut n = Number::default();
             for expr_rc in list.iter() {
                 n = expr_rc.as_ref().eval();
-            };
+            }
             n
         })
     }
@@ -268,15 +268,19 @@ impl Expr {
                 v
             }
             Expr::Flow(ref flow) => {
-                let resp = Number::default();
                 match flow {
-                    ControlFlow::Condition(ref conf) => {
+                    ControlFlow::Condition(ref flow) => {
                         // It must be a boolean value.
-                        unimplemented!()
+                        let cond = flow.cond.eval().as_bool();
+                        if cond {
+                            flow.if_branch.eval()
+                        } else {
+                            flow.else_branch
+                                .as_ref()
+                                .map_or(Number::default(), |branch| branch.eval())
+                        }
                     }
                 }
-
-                resp
             }
         }
     }

@@ -9,7 +9,7 @@ lalrpop_mod!(pub calculator); // synthesized by LALRPOP
 pub mod calculator_ast;
 
 #[test]
-fn calculator() {
+fn expr_calculator() {
     assert!(calculator::NumParser::new().parse("22").is_ok());
     assert!(calculator::FactorParser::new().parse("22").is_ok());
     assert!(calculator::ExprParser::new().parse("22").is_ok());
@@ -90,5 +90,35 @@ fn calculator() {
             .unwrap()
             .eval()
             .as_bool()
+    );
+}
+
+#[test]
+fn stmt_test() {
+    assert_eq!(
+        3,
+        calculator::ListParser::new()
+            .parse("a = 2 ; if ( a == 2 )  then { 3 }")
+            .unwrap()
+            .eval()
+            .as_i64()
+    );
+
+    assert_eq!(
+        3,
+        calculator::ListParser::new()
+            .parse("a = 2 ; if ( a == 2 )  then { 3 } else { 5 }")
+            .unwrap()
+            .eval()
+            .as_i64()
+    );
+
+    assert_eq!(
+        3,
+        calculator::ListParser::new()
+            .parse("a = 1 ; if ( a == 2 )  then { 3 } else { 5 }")
+            .unwrap()
+            .eval()
+            .as_i64()
     );
 }

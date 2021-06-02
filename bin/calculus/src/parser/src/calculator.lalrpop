@@ -19,9 +19,11 @@ grammar;
 
 pub Statement: calculator_ast::Expr = {
     <e: Expr> => {
+        println!("Build a stmt from expr: {:?}", e);
         e
     },
-    IF <e: Expr> THEN <l1: List> ELSE <l2: List> => {
+    IF <e: Expr> THEN "{" <l1: List> "}" ELSE  "{" <l2: List> "}" => {
+        println!("Build a if than else clause");
         let cond = Box::new(e);
         let if_branch = l1;
         let else_branch = l2;
@@ -34,7 +36,8 @@ pub Statement: calculator_ast::Expr = {
 
         calculator_ast::Expr::Flow(flow)
     },
-    IF <e: Expr> THEN <l: List> => {
+    IF <e: Expr> THEN "{" <l: List> "}" => {
+        println!("Build a if than clause");
         let cond = Box::new(e);
         let if_branch = l;
 
@@ -49,10 +52,13 @@ pub Statement: calculator_ast::Expr = {
 }; 
 
 pub List: calculator_ast::ExprList = {
-    () => {
-        calculator_ast::ExprList(None)
+    <stmt: Statement> => {
+        let mut new_list = LinkedList::default();
+        new_list.push_back(Rc::new(stmt));
+        calculator_ast::ExprList(Some(new_list))
     },
-    <stmt: Statement> ";" <l: List> => {
+    <l: List> ";" <stmt: Statement> => {
+        println!("Build a Non Empty ExprList");
         if l.0.is_none() {
             let mut new_list = LinkedList::default();
             new_list.push_back(Rc::new(stmt));
@@ -78,7 +84,9 @@ pub Expr: calculator_ast::Expr = {
 
 // Comparing 没有优先级
 pub CmpAndFnExpr: calculator_ast::Expr = {
-    MulExpr,
+    <me: MulExpr> => {
+        me
+    },
     <left: CmpAndFnExpr> Equal <right: MulExpr> => {
         calculator_ast::Expr::TwoOp(
             calculator_ast::Opcode::Equal,
@@ -164,6 +172,9 @@ pub Factor: calculator_ast::Expr = {
 
 // only pub will generate parser.
 pub Num: calculator_ast::Expr = { 
+    <s: VarName> => {
+        calculator_ast::Expr::VarRef(s.into())
+    },
     <s:r"[0-9]+"> => { 
         // return a number expr.
         calculator_ast::Expr::Number(
