@@ -73,4 +73,22 @@ fn calculator() {
             .eval()
             .as_i64()
     );
+
+    assert_eq!(
+        1 - 22 * 33,
+        calculator::ExprParser::new()
+            .parse("a = 1 -22 * 33")
+            .unwrap()
+            .eval()
+            .as_i64()
+    );
+
+    assert_eq!(
+        true,
+        calculator::ExprParser::new()
+            .parse("-100 -200 -85 * 5 == 1 -22 * 33")
+            .unwrap()
+            .eval()
+            .as_bool()
+    );
 }
