@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, LinkedList};
 use std::fmt::Debug;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 /// Note: we need to represent not only integers.
@@ -18,15 +19,8 @@ impl Default for Number {
     }
 }
 
-// To use the `{}` marker, the trait `fmt::Display` must be implemented
-// manually for the type.
 impl std::fmt::Display for Number {
-    // This trait requires `fmt` with this exact signature.
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        // Write strictly the first element into the supplied output
-        // stream: `f`. Returns `fmt::Result` which indicates whether the
-        // operation succeeded or failed. Note that `write!` uses syntax which
-        // is very similar to `println!`.
         match self {
             Number::F64(fv) => {
                 write!(f, "F64({})", fv)
@@ -190,6 +184,44 @@ pub enum Expr {
     TwoOp(Opcode, Box<Expr>, Box<Expr>),
     VarRef(String),
     Assign(String, Box<Expr>),
+    Flow(ControlFlow),
+}
+
+#[derive(Clone)]
+pub struct ExprList(pub Option<LinkedList<Rc<Expr>>>);
+
+impl ExprList {
+    /// Executing all the expressions, and return the last one.
+    /// If no expression provided, return I64(0).
+    pub fn eval(&self) -> Number {
+        self.0.as_ref().map_or(Number::default(), |list| {
+            let mut n = Number::default();
+            for expr_rc in list.iter() {
+                n = expr_rc.as_ref().eval();
+            }
+            n
+        })
+    }
+}
+
+impl Debug for ExprList {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "(")?;
+        for member in self.0.iter() {
+            write!(f, "{:?}", member)?;
+        }
+        write!(f, ")")
+    }
+}
+
+pub struct IfCondition {
+    pub cond: Box<Expr>,
+    pub if_branch: ExprList,
+    pub else_branch: Option<ExprList>,
+}
+
+pub enum ControlFlow {
+    Condition(IfCondition),
 }
 
 impl Expr {
@@ -235,6 +267,21 @@ impl Expr {
                 });
                 v
             }
+            Expr::Flow(ref flow) => {
+                match flow {
+                    ControlFlow::Condition(ref flow) => {
+                        // It must be a boolean value.
+                        let cond = flow.cond.eval().as_bool();
+                        if cond {
+                            flow.if_branch.eval()
+                        } else {
+                            flow.else_branch
+                                .as_ref()
+                                .map_or(Number::default(), |branch| branch.eval())
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -249,6 +296,14 @@ impl Debug for Expr {
             TwoOp(op, ref lnode, ref rnode) => write!(f, "({:?}: <{:?}, {:?}>)", op, lnode, rnode),
             VarRef(ref v) => write!(f, "var({:?})", v),
             Assign(ref name, ref rnode) => write!(f, "({:?} = {:?})", name, rnode),
+            Flow(ref flow) => {
+                match flow {
+                    ControlFlow::Condition(if_cond) => {
+                        write!(f, "Flow(If({:?}, then: {:?})", if_cond.cond, if_cond.if_branch)
+                    }
+                }
+                
+            }
         }
     }
 }
