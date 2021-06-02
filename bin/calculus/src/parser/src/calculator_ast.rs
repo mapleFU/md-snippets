@@ -296,8 +296,13 @@ impl Debug for Expr {
             TwoOp(op, ref lnode, ref rnode) => write!(f, "({:?}: <{:?}, {:?}>)", op, lnode, rnode),
             VarRef(ref v) => write!(f, "var({:?})", v),
             Assign(ref name, ref rnode) => write!(f, "({:?} = {:?})", name, rnode),
-            Flow(_) => {
-                unimplemented!()
+            Flow(ref flow) => {
+                match flow {
+                    ControlFlow::Condition(if_cond) => {
+                        write!(f, "Flow(If({:?}, then: {:?})", if_cond.cond, if_cond.if_branch)
+                    }
+                }
+                
             }
         }
     }

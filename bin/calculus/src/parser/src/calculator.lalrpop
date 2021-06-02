@@ -19,11 +19,9 @@ grammar;
 
 pub Statement: calculator_ast::Expr = {
     <e: Expr> => {
-        println!("Build a stmt from expr: {:?}", e);
         e
     },
     IF <e: Expr> THEN "{" <l1: List> "}" ELSE  "{" <l2: List> "}" => {
-        println!("Build a if than else clause");
         let cond = Box::new(e);
         let if_branch = l1;
         let else_branch = l2;
@@ -37,7 +35,6 @@ pub Statement: calculator_ast::Expr = {
         calculator_ast::Expr::Flow(flow)
     },
     IF <e: Expr> THEN "{" <l: List> "}" => {
-        println!("Build a if than clause");
         let cond = Box::new(e);
         let if_branch = l;
 
@@ -58,7 +55,6 @@ pub List: calculator_ast::ExprList = {
         calculator_ast::ExprList(Some(new_list))
     },
     <l: List> ";" <stmt: Statement> => {
-        println!("Build a Non Empty ExprList");
         if l.0.is_none() {
             let mut new_list = LinkedList::default();
             new_list.push_back(Rc::new(stmt));
