@@ -5,12 +5,12 @@ pub struct Row {
     data_bytes: [u8; 64],
 }
 
-struct DirectRows {
+pub struct DirectRows {
     rows: Vec<Row>,
 }
 
 impl DirectRows {
-    fn new_with_size(sz: usize) -> Self {
+    pub fn new_with_size(sz: usize) -> Self {
         let mut rows = Vec::with_capacity(sz);
         rows.resize(
             sz,
@@ -22,13 +22,13 @@ impl DirectRows {
     }
 }
 
-struct IndirectRows {
+pub struct IndirectRows {
     indirect_offset: Vec<u32>,
     rows: Vec<u8>,
 }
 
 impl IndirectRows {
-    fn new_with_size(sz: usize) -> Self {
+    pub fn new_with_size(sz: usize) -> Self {
         let mut rows = Vec::with_capacity(sz * 64);
         let mut indirect_offset: Vec<u32> = Vec::with_capacity(sz);
         for i in 0..sz {
@@ -56,13 +56,11 @@ impl Index<usize> for IndirectRows {
 
     fn index(&self, index: usize) -> &Self::Output {
         unsafe {
-            std::mem::transmute::<usize, &[u8; 64]>(
+            std::mem::transmute::<*const u8, &[u8; 64]>(
                 self.rows
                     .as_ptr()
-                    .align_offset(self.indirect_offset[index] as usize),
+                    .offset(self.indirect_offset[index] as isize),
             )
         }
     }
 }
-
-fn main() {}
