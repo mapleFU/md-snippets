@@ -2,9 +2,9 @@ use std::time;
 
 use bit_field::BitField;
 
-// Epoch is set to the twitter snowflake epoch of Nov 04 2010 01:42:54 UTC in milliseconds
-// You may customize this to set a different epoch for your application.
-const EPOCH: u64 = 1288834974657;
+// // Epoch is set to the twitter snowflake epoch of Nov 04 2010 01:42:54 UTC in milliseconds
+// // You may customize this to set a different epoch for your application.
+// const EPOCH: u64 = 1288834974657;
 
 // TODO(mwish): Think of can we use atomic and cas.
 pub struct Node {
